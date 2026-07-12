@@ -177,6 +177,39 @@ prisma/
   seed.ts
 ```
 
+## Arquitectura
+
+Hoy es un **monolito modular**: un solo proceso Node, un solo deploy en Render, pero internamente separado en módulos de NestJS con límites claros (uno por dominio: `auth`, `products`, `cart`, `favorites`, `payment-methods`, `addresses`, `orders`, `nikeplus`, `health`). Cada módulo sigue la misma capa estándar de Nest:
+
+```
+Controller (HTTP + validación de DTOs)
+    ↓
+Service (lógica de negocio)
+    ↓
+PrismaService (acceso a datos, inyectado vía DI)
+```
+
+Piezas transversales, registradas globalmente en `app.module.ts` en vez de repetidas por módulo:
+
+- **`RequestIdMiddleware`** — genera un `requestId` por request, usado en logs y en el envelope de error, para poder rastrear una llamada específica.
+- **`HttpExceptionFilter`** — normaliza cualquier excepción al mismo formato `{ error: { code, message, type, requestId } }`.
+- **`LoggingInterceptor`** — loguea cada request/response.
+- **`JwtAuthGuard`** (global, con `@Public()` para excepciones como login/register/products) + **`ThrottlerGuard`** (rate limiting: 100 requests/60s por IP).
+- **`PaymentGateway`** (`src/orders/payment-gateway/`) — la única dependencia externa (pasarela de pagos) está detrás de una interfaz, con `MockPaymentGateway` como implementación actual. Cambiar a un procesador real no toca nada fuera de esa carpeta.
+
+Autenticación **stateless**: cada request se valida por JWT (access token de corta duración + refresh token rotado y persistido en `refresh_tokens`), no hay sesión en memoria del servidor — esto es lo que hace posible correr varias instancias del API sin coordinarlas entre sí (ver escalabilidad abajo).
+
+## Escalabilidad futura
+
+El diseño actual ya deja varios caminos abiertos sin necesitar una reescritura:
+
+- **Escalar horizontalmente el API tal cual está.** Como la auth es stateless (JWT, sin sesión en memoria) y Neon ya maneja el pooling de conexiones, se pueden levantar más instancias del mismo proceso Nest detrás de un load balancer sin cambios de código — solo pasar de un plan Free/single-instance de Render a uno que soporte múltiples instancias.
+- **Separar módulos en servicios independientes si el tráfico lo justifica.** Como cada dominio ya es un módulo de Nest con su propio Controller/Service (no hay lógica cruzada entre carpetas), el candidato más claro para separar primero sería `orders/` (checkout + pagos), ya que suele ser el cuello de botella en un e-commerce — se movería a su propio servicio sin tocar `products/`, `cart/`, etc.
+- **Cache para lecturas de alto tráfico.** `GET /products` es público y de solo lectura — es el candidato natural para una capa de cache (Redis, o cache HTTP con `Cache-Control`) antes de escalar la base de datos.
+- **Colas para trabajo asíncrono.** Hoy el checkout llama a `PaymentGateway` de forma síncrona dentro del request. Si se conecta un gateway real con latencia variable (Culqi, VisaNet), conviene mover la confirmación de pago a una cola (ej. BullMQ) y responder al cliente antes de que el pago termine de procesarse, actualizando el estado del pedido después.
+- **Base de datos:** Neon ya soporta *read replicas* y *autoscaling* de cómputo en planes pagos — si las lecturas (catálogo, historial de pedidos) se vuelven el cuello de botella antes que las escrituras, se pueden apuntar esas queries a una réplica sin cambiar el esquema.
+- **Observabilidad:** el `requestId` por request y el `LoggingInterceptor` ya existen — el siguiente paso natural al escalar sería exportar esos logs a un servicio centralizado (ej. Datadog, Grafana Loki) en vez de solo stdout, para poder correlacionar errores entre múltiples instancias.
+
 ## Estado
 
 El backend (Fases 1-7 del plan del proyecto) está completo y verificado de punta a punta contra Neon, y desplegado en Render. La integración con iOS (Fases 8-13) fue un esfuerzo posterior, ya completado en el app.
