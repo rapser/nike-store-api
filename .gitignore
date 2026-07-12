@@ -29,6 +29,5 @@ coverage/
 # misc
 *.tsbuildinfo
 .eslintcache
-node_modules
 
 /generated/prisma
