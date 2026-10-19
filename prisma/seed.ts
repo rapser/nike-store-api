@@ -14,16 +14,21 @@ const prisma = new PrismaClient();
 const IMAGE_BASE =
   'https://www.nike.com.pe/dw/image/v2/BJKZ_PRD/on/demandware.static/-/Sites-catalog-equinox/default';
 
-const IMAGES_PER_PRODUCT = 6;
-
+/**
+ * Cuántas vistas publica la tienda varía por producto: un par de zapatillas suele
+ * tener 8 y se recortan a 6, pero una camiseta o una gorra pueden tener una sola.
+ * Por eso `count` va explícito y verificado contra el CDN, en vez de asumir un número
+ * fijo: pedir una vista que no existe deja un hueco en el carrusel del detalle.
+ */
 function buildImages(
   hash: string,
   gtin: string,
   date: string,
-  ext: 'jpg' | 'jpeg' = 'jpg',
+  count = 6,
+  ext: 'jpg' | 'jpeg' | 'png' = 'jpg',
 ): string[] {
   return Array.from(
-    { length: IMAGES_PER_PRODUCT },
+    { length: count },
     (_, index) =>
       `${IMAGE_BASE}/${hash}/images/hi-res/${gtin}_${index + 1}_${date}-mrtPeru.${ext}?sw=900&sh=900`,
   );
@@ -59,7 +64,7 @@ const products = [
       'El clásico de 1985 en su combinación negro y azul royal, con cuero premium y la unidad Air encapsulada del original.',
     detail:
       'El clásico de 1985 en su combinación negro y azul royal, con cuero premium y la unidad Air encapsulada del original. Corte alto, Swoosh cosido y el Wings en el tobillo: la silueta que empezó todo, sin retoques.',
-    images: buildImages('dwb510f263', '198967044394', '20261007', 'jpeg'),
+    images: buildImages('dwb510f263', '198967044394', '20261007', 6, 'jpeg'),
   },
   {
     id: '198959336193',
@@ -119,7 +124,7 @@ const products = [
       'El ícono de 1982 en cuero blanco, con la unidad Air en el talón y la suela de espiga que lo hizo inconfundible.',
     detail:
       'El ícono de 1982 en cuero blanco, con la unidad Air en el talón y la suela de espiga que lo hizo inconfundible. Costuras reforzadas, perforaciones en la puntera y el dije metálico en los cordones.',
-    images: buildImages('dwffc32bcf', '194500874572', '20240126120000', 'jpeg'),
+    images: buildImages('dwffc32bcf', '194500874572', '20240126120000', 6, 'jpeg'),
   },
   {
     id: '194500875357',
@@ -139,7 +144,7 @@ const products = [
       'Zapatillas de entrenamiento para mujer que combinan la flexibilidad de la suela Free con la base estable de la línea Metcon.',
     detail:
       'Zapatillas de entrenamiento para mujer que combinan la flexibilidad de la suela Free con la base estable de la línea Metcon. El talón ancho sostiene el levantamiento de pesas y la puntera flexible acompaña el trote entre series.',
-    images: buildImages('dw2fac8462', '198728792540', '20260416', 'jpeg'),
+    images: buildImages('dw2fac8462', '198728792540', '20260416', 6, 'jpeg'),
   },
   {
     id: '197597039824',
@@ -188,6 +193,164 @@ const products = [
     detail:
       'El Dunk Low en su versión premium, con cuero de mayor calidad y los bloques de color que vienen de las canchas universitarias. Collar acolchado, lengüeta de espuma y suela de caucho duradera.',
     images: buildImages('dwdae21f80', '198959700840', '20260804'),
+  },
+
+  // ---- Fútbol: camisetas de Alianza Lima (temporada 2026) ----
+  {
+    id: '198961403944',
+    name: 'CAMISETA ALIANZA LIMA 2026 STADIUM',
+    price: 269.9,
+    description:
+      'Tercera equipación 2026 de Alianza Lima para hombre, con tecnología Dri-FIT que aleja el sudor de la piel.',
+    detail:
+      'Tercera equipación 2026 de Alianza Lima para hombre, con tecnología Dri-FIT que aleja el sudor de la piel. Corte suelto para moverse libre en la tribuna o en la cancha, con el escudo bordado y el Swoosh aplicado.',
+    images: buildImages('dwbd72fb38', '198961403944', '20260828', 1),
+  },
+  {
+    id: '198961407690',
+    name: 'CAMISETA ALIANZA LIMA 2026 STADIUM (MUJER)',
+    price: 269.9,
+    description:
+      'La tercera equipación 2026 del club íntimo en corte para mujer, en tejido Dri-FIT ligero.',
+    detail:
+      'La tercera equipación 2026 del club íntimo en corte para mujer, en tejido Dri-FIT ligero. Costuras planas que no rozan y cuello acanalado que recupera la forma después de cada lavada.',
+    images: buildImages('dw3b1a3785', '198961407690', '20260828', 2),
+  },
+  {
+    id: '198961409083',
+    name: 'CAMISETA ALIANZA LIMA 2026 STADIUM (NIÑOS)',
+    price: 199.9,
+    description:
+      'La camiseta del club para niños grandes, en el mismo tejido Dri-FIT de la versión adulta.',
+    detail:
+      'La camiseta del club para niños grandes, en el mismo tejido Dri-FIT de la versión adulta. Resiste los lavados seguidos y se seca rápido después del partido.',
+    images: buildImages('dw267ac4fb', '198961409083', '20260828', 2),
+  },
+
+  // ---- Accesorios ----
+  {
+    id: '196606810751',
+    name: 'GORRA NIKE CLUB FUTURA WASH',
+    price: 89.9,
+    description:
+      'Gorra desestructurada de algodón lavado, con el Futura bordado al frente y cierre ajustable.',
+    detail:
+      'Gorra desestructurada de algodón lavado, con el Futura bordado al frente y cierre ajustable. La copa sin estructura se amolda a la cabeza desde el primer día, sin el rigor de una gorra nueva.',
+    images: buildImages('dw2c3a7d41', '196606810751', '20240129120000', 1),
+  },
+  {
+    id: '194958681180',
+    name: 'MOCHILA NIKE ELEMENTAL (21 L)',
+    price: 169.9,
+    description:
+      'Mochila de 21 litros con compartimento acolchado para laptop y bolsillo exterior para la botella.',
+    detail:
+      'Mochila de 21 litros con compartimento acolchado para laptop y bolsillo exterior para la botella. Las tiras ajustables y el panel trasero acolchado reparten el peso en trayectos largos.',
+    images: buildImages('dw17b2c6bd', '194958681180', '20240904', 6),
+  },
+  {
+    id: '194954124865',
+    name: 'MEDIAS NIKE EVERYDAY CUSHIONED (6 PARES)',
+    price: 89.9,
+    description:
+      'Pack de seis pares de medias invisibles con acolchado en la planta y arco de sujeción.',
+    detail:
+      'Pack de seis pares de medias invisibles con acolchado en la planta y arco de sujeción. El tejido Dri-FIT mantiene el pie seco y el talón reforzado evita que se bajen dentro de la zapatilla.',
+    images: buildImages('dw2e44b825', '194954124865', '20240819', 4),
+  },
+  {
+    id: '198486719742',
+    name: 'PELOTA DE FÚTBOL NIKE ACADEMY TOTAL 90',
+    price: 129.9,
+    description:
+      'Balón de entrenamiento con cubierta resistente y gráfico Total 90 de alta visibilidad.',
+    detail:
+      'Balón de entrenamiento con cubierta resistente y gráfico Total 90 de alta visibilidad. Las ranuras de la superficie dan un vuelo estable y la cámara retiene el aire entre sesiones.',
+    images: buildImages('dwe35e007d', '198486719742', '20251103', 2),
+  },
+  {
+    id: '195871704628',
+    name: 'CANILLERAS NIKE MERCURIAL LITE',
+    price: 99.9,
+    description:
+      'Canilleras ligeras con carcasa curva y espuma interna, sujetas con cintas elásticas.',
+    detail:
+      'Canilleras ligeras con carcasa curva y espuma interna, sujetas con cintas elásticas. Pesan poco y se amoldan a la pierna, así que no hay que pelear con ellas a mitad del partido.',
+    images: buildImages('dwad2ae18b', '195871704628', '20240605120000', 1, 'jpeg'),
+  },
+
+  // ---- Ropa de entrenamiento ----
+  {
+    id: '198727630683',
+    name: 'SHORT NIKE STRIDE DRI-FIT 13 CM',
+    price: 199.9,
+    description:
+      'Short de correr de 13 cm con forro de ropa interior y bolsillos con cierre para el celular y las llaves.',
+    detail:
+      'Short de correr de 13 cm con forro de ropa interior y bolsillos con cierre para el celular y las llaves. El tejido Dri-FIT seca rápido y las aberturas laterales dejan la zancada libre.',
+    images: buildImages('dw750dc18b', '198727630683', '20260202', 5),
+  },
+  {
+    id: '197860499911',
+    name: 'POLO NIKE STRIDE DRI-FIT ADV',
+    price: 189.9,
+    description:
+      'Polo de correr de manga corta con tejido Dri-FIT ADV y zonas de ventilación donde más se transpira.',
+    detail:
+      'Polo de correr de manga corta con tejido Dri-FIT ADV y zonas de ventilación donde más se transpira. Las costuras están colocadas fuera de los puntos de roce, para salidas largas.',
+    images: buildImages('dw6affef4a', '197860499911', '20250107', 6),
+  },
+  {
+    id: '198727064549',
+    name: 'BRA DEPORTIVO NIKE SWIFT',
+    price: 249.9,
+    description:
+      'Bra de alta sujeción con forro ligero, pensado para correr y para entrenamientos de impacto.',
+    detail:
+      'Bra de alta sujeción con forro ligero, pensado para correr y para entrenamientos de impacto. Las tiras ajustables y la banda ancha reparten la presión sin marcar.',
+    images: buildImages('dw4db9c201', '198727064549', '20260202', 5),
+  },
+
+  // ---- Running, trail y sandalias ----
+  {
+    id: '198960939345',
+    name: 'NIKE V2K RUN',
+    price: 599.9,
+    description:
+      'Silueta de running de los 2000 traída a la calle, con capas metalizadas y entresuela amplia.',
+    detail:
+      'Silueta de running de los 2000 traída a la calle, con capas metalizadas y entresuela amplia. Malla transpirable en la capellada y unidad Air en el talón para el uso diario.',
+    images: buildImages('dwa37e8892', '198960939345', '20260624', 6),
+  },
+  {
+    id: '195866187351',
+    name: 'NIKE AIR MAX 90',
+    price: 639.9,
+    description:
+      'El Air Max 90 con su unidad Air visible, los paneles superpuestos y el Waffle de la suela.',
+    detail:
+      'El Air Max 90 con su unidad Air visible, los paneles superpuestos y el Waffle de la suela. Cuero y malla en la capellada, en la proporción que lo hizo un clásico desde 1990.',
+    images: buildImages('dw7189a6b2', '195866187351', '20230210120000', 5, 'png'),
+  },
+  {
+    id: '198959976870',
+    name: 'NIKE ACG PEGASUS TRAIL GORE-TEX',
+    price: 779.9,
+    description:
+      'Zapatillas de trail con membrana GORE-TEX impermeable y suela de tacos para terreno suelto.',
+    detail:
+      'Zapatillas de trail con membrana GORE-TEX impermeable y suela de tacos para terreno suelto. La amortiguación React aguanta las bajadas largas y el refuerzo en la puntera protege de las piedras.',
+    images: buildImages('dwf28a070b', '198959976870', '20260917', 6),
+  },
+  {
+    id: '197864030332',
+    name: 'NIKE PACIFIC',
+    price: 319.9,
+    description:
+      'Sandalias de tiras ajustables con suela acolchada, para el verano y el post-entrenamiento.',
+    detail:
+      'Sandalias de tiras ajustables con suela acolchada, para el verano y el post-entrenamiento. Las tiras se regulan con velcro y la plantilla contorneada sostiene el arco del pie.',
+    images: buildImages('dw2351d83e', '197864030332', '20250326', 6),
   },
 ];
 
