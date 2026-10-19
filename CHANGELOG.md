@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased] — `feature/catalogo-30-productos`
+
+### Changed
+
+- Catálogo ampliado de 15 a **30 productos**, con variedad más allá del calzado: camisetas de Alianza Lima (hombre, mujer y niños), accesorios (gorra, mochila Elemental 21 L, pack de medias, pelota Academy Total 90, canilleras Mercurial Lite), ropa de entrenamiento (short y polo Stride Dri-FIT, bra Swift) y más calzado (V2K Run, Air Max 90, ACG Pegasus Trail GORE-TEX, sandalias Pacific). Todo de [nike.com.pe](https://www.nike.com.pe/), con sus precios reales en soles (S/ 89.90 – S/ 1,019.90).
+- `buildImages` recibe ahora el **número de vistas por producto** en vez de asumir 6. No todos publican la misma cantidad: unas zapatillas suelen tener 8 (se recortan a 6), pero una camiseta o una gorra pueden tener una sola, y pedir una vista inexistente dejaba un hueco en el carrusel del detalle. También acepta `png`, que es el formato del Air Max 90.
+
+### Verified
+
+- `npx tsc --noEmit`, `npm run build` y `npm run lint` pasan.
+- Las 148 URLs de imagen que genera el seed responden `200`.
+
+### Pendiente
+
+- Correr `npx prisma db seed` contra Neon para que el catálogo nuevo quede vivo — quedó bloqueado en la sesión por ser base compartida.
+
 ## [Unreleased] — `feature/catalogo-peru`
 
 ### Changed
