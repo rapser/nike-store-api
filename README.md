@@ -16,7 +16,7 @@ API REST para el app iOS [Nike+Research](../..) — NestJS + Prisma + PostgreSQL
 npm install
 cp .env.example .env   # completa DATABASE_URL / DIRECT_URL / JWT secrets — ver abajo
 npx prisma migrate dev # aplica las migraciones contra la base definida en .env
-npx prisma db seed     # carga el catálogo demo de productos + usuario demo
+npx prisma db seed     # carga el catálogo de nike.com.pe + usuario demo
 npm run start:dev
 ```
 
@@ -50,7 +50,7 @@ Así se configuró la base de datos de este proyecto en Neon:
    }
    ```
 7. Correr `npx prisma migrate dev` — esto crea todas las tablas en la rama `production` de Neon según `prisma/schema.prisma`, y genera el cliente de Prisma localmente.
-8. Correr `npx prisma db seed` — carga el catálogo demo de productos y un usuario de prueba (`jordan@nike.com` / `password123`).
+8. Correr `npx prisma db seed` — carga el catálogo de nike.com.pe (14 productos, precios en soles) y un usuario de prueba (`jordan@nike.com` / `password123`).
 9. Verificar que todo cargó bien entrando a **Tables** en el dashboard de Neon, o con `npx prisma studio` (ver sección "Inspeccionar la base de datos" más abajo).
 
 A partir de ahí, tanto el backend corriendo en local como el desplegado en Render apuntan a la **misma** base de Neon (mismas variables `DATABASE_URL`/`DIRECT_URL`), así que los datos son compartidos entre ambos ambientes.
