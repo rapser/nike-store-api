@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsInt, IsString, Min } from 'class-validator';
 
 export class AddCartItemDto {
-  @ApiProperty({ example: '875942-100' })
+  @ApiProperty({ example: '194500874572' })
   @IsString()
   productId: string;
 

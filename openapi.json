@@ -790,7 +790,7 @@
         "properties": {
           "productId": {
             "type": "string",
-            "example": "875942-100"
+            "example": "194500874572"
           },
           "quantity": {
             "type": "number",
@@ -821,7 +821,7 @@
         "properties": {
           "productId": {
             "type": "string",
-            "example": "875942-100"
+            "example": "194500874572"
           }
         },
         "required": [

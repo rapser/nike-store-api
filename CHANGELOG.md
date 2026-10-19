@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased] — `feature/catalogo-peru`
+
+### Changed
+
+- Catálogo sembrado con los 15 productos reales de [nike.com.pe](https://www.nike.com.pe/) (Pegasus Plus 2, Air Jordan 1/4, Air Force 1, Dunk Low, Kobe 8 Protro, Total 90, Free Metcon 7, Spizike Low), con **precios en soles (PEN)** tal como aparecen en la tienda peruana. Reemplazan a los 4 productos dummy en USD.
+- `Product.images` ahora guarda **URLs absolutas** del CDN de nike.com.pe (6 vistas por producto, `?sw=900&sh=900`) en vez de nombres de asset del bundle del app iOS. El app las descarga en runtime.
+- El seed borra los productos que ya no están en el catálogo. `cart_items` y `favorites` caen en cascada; un producto referenciado por `order_items` (`onDelete: Restrict`) no se puede borrar, así que su fila se recicla con un producto real de nike.com.pe en vez de quedarse con datos en USD e imágenes del bundle (es el caso de `875942-100`). Los pedidos ya emitidos no cambian: `order_items` guarda su propio `shoeName` y `shoePrice`, un snapshot de la compra.
+- Ejemplos de `productId` en Swagger (`POST /cart`, `POST /favorites`) actualizados al nuevo formato de id (GTIN, ej. `194500874572`); `openapi.json` regenerado.
+
+### Verified
+
+- `npx tsc --noEmit`, `npm run build` y `npm run lint` pasan.
+- Las 90 URLs de imagen (15 productos × 6 vistas) responden `200` con contenido distinto por vista.
+- Seed corrido contra Neon: `GET /products` en Render devuelve 15 productos, todos con 6 URLs `https` del CDN.
+
 ## [Unreleased] — `feature/backend-scaffold-fases-1-7`
 
 Backend built from scratch per `PLAN.md`, Fases 1-7. Replaces the previous empty Express scaffold entirely.
