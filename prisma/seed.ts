@@ -162,6 +162,24 @@ const products = [
     images: buildImages('dwa4a81a00', '198730371429', '20260624'),
   },
   {
+    /**
+     * Este id viene del catálogo dummy anterior: la fila no se puede borrar porque
+     * hay pedidos que la referencian (`order_items.productId`, `onDelete: Restrict`),
+     * así que en vez de dejarla con datos en USD e imágenes del bundle, se recicla
+     * con un producto real de nike.com.pe. Los pedidos ya emitidos no se ven
+     * afectados: `order_items` guarda su propio `shoeName` y `shoePrice`, un
+     * snapshot del momento de la compra.
+     */
+    id: '875942-100',
+    name: 'NIKE AIR FORCE 1 \'07 LV8 "DENIM"',
+    price: 599.9,
+    description:
+      'El AF1 en gris con paneles de denim, mezclando el cuero de siempre con una textura de mezclilla.',
+    detail:
+      'El AF1 en gris con paneles de denim, mezclando el cuero de siempre con una textura de mezclilla. Unidad Air en el talón, collar acolchado y suela de caucho con el patrón de espiga original.',
+    images: buildImages('dwa8cf707f', '198959699465', '20260624'),
+  },
+  {
     id: '198959700840',
     name: 'NIKE DUNK LOW RETRO PREMIUM',
     price: 599.9,
