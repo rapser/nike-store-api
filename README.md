@@ -66,8 +66,8 @@ Así se desplegó este backend a [Render](https://render.com):
    - **Branch:** `main`
    - **Root Directory:** vacío (el proyecto está en la raíz del repo)
    - **Runtime:** Node (detectado automáticamente)
-   - **Build Command:** `npm install && npm run build`
-   - **Start Command:** `npm run start:prod` (corre `node dist/main`, el build ya compilado — **no** usar `npm run start`, que es el modo desarrollo)
+   - **Build Command:** `npm install --include=dev && npm run build` (el `--include=dev` es obligatorio: con `NODE_ENV=production` un `npm install` normal se salta las `devDependencies`, y `nest build` y `prisma generate` —el `postinstall`— viven ahí, así que el build falla)
+   - **Start Command:** `npm run start:prod` (corre `node dist/src/main`, el build ya compilado — **no** usar `npm run start`, que es el modo desarrollo)
    - **Instance Type:** Free (ver limitaciones abajo)
 5. Antes de desplegar, agregar las **variables de entorno** (sección "Environment Variables" del mismo formulario, o después en la pestaña "Environment"):
    - `DATABASE_URL` → el connection string **pooled** de Neon
@@ -77,15 +77,37 @@ Así se desplegó este backend a [Render](https://render.com):
    - `NODE_ENV` = `production`
    - (`PORT` **no** se agrega — Render la inyecta sola y `src/main.ts` ya la respeta con `process.env.PORT`)
 6. **Requisito importante:** el `package.json` de este repo tiene un script `"postinstall": "prisma generate"`. Sin esto, Render instala las dependencias pero nunca regenera el cliente de Prisma contra `schema.prisma`, y la app crashea al arrancar. Esto es un paso obligatorio en cualquier proyecto con Prisma desplegado a un hosting nuevo (no es específico de Render).
-7. Configurar el **Health Check Path** en `/health` (endpoint ya expuesto por `src/health/`, revisa conectividad a la base con un `SELECT 1`).
+7. Configurar el **Health Check Path** en `/health` (endpoint ya expuesto por `src/health/`, revisa conectividad a la base con un `SELECT 1`; está excluido del rate limiter). Se configura en **Advanced** al crear el servicio, o en Settings después.
 8. Click en **Deploy Web Service**.
 9. Una vez desplegado, Render asigna una URL pública (tipo `https://nike-store-api-xxxx.onrender.com`) — esa URL es la que se usa como `API_BASE_URL` de producción en el app iOS (`Nike+Research/Configuration/Production.xcconfig`).
 
 ### Limitaciones del plan Free de Render a tener en cuenta
 
-- **Spin down por inactividad:** si no hay tráfico por ~15 minutos, la instancia se apaga. La siguiente request puede tardar 30-60 segundos en responder mientras Render la "despierta" (cold start). Por eso el timeout de las requests en el app iOS se subió a 90 segundos (ver `AppConfig.swift`).
+- **Spin down por inactividad:** si no hay tráfico por ~15 minutos, la instancia se apaga. La siguiente request puede tardar 30-60 segundos en responder mientras Render la "despierta" (cold start). Por eso el timeout de las requests en el app iOS se subió a 90 segundos (ver `AppConfig.swift`). Para evitarlo, el backend se hace ping a sí mismo (ver [Keep-alive](#keep-alive-contra-el-spin-down)).
+- **750 horas al mes por cuenta:** un servicio Free despierto todo el mes gasta ~744 h. Solo **un** servicio Free por cuenta de Render puede mantenerse despierto; con dos, Render los suspende hasta el mes siguiente.
 - **Sin "one-off jobs":** no se puede correr `npx prisma migrate deploy` como un job aislado en la infraestructura de Render — hay que correrlo manualmente desde una máquina local apuntando al `DIRECT_URL` de producción cada vez que haya una migración nueva.
 - Sin acceso SSH, sin scaling, sin discos persistentes — ninguno de estos aplica a este proyecto (no se necesita almacenamiento local ni escalado horizontal).
+
+### Keep-alive contra el spin down
+
+`src/health/keep-alive.service.ts` hace que la propia app consulte su URL pública (`GET <URL>/health`) cada 10 minutos, para que Render no la duerma. Tiene que ser la URL pública y no `localhost`: solo el tráfico que entra por el proxy de Render cuenta como actividad. Se descartó un cron externo (cron-job.org, UptimeRobot) porque sus IPs las comparten miles de usuarios que hacen ping a Render, y Render responde `429` sin despertar la app.
+
+- **No requiere configuración en Render**: usa `RENDER_EXTERNAL_URL`, que Render inyecta sola. En local no hace nada.
+- Al arrancar deja en los logs `Pinging https://… every 10 min`; es la forma de confirmar en Render → Logs que está activo.
+- Un fallo de red o un status no-2xx solo deja un `warn`; nunca tumba la app.
+- Variables opcionales:
+
+  | Variable | Efecto |
+  |---|---|
+  | `KEEP_ALIVE_URL` | URL base alternativa (se le agrega `/health`) |
+  | `KEEP_ALIVE_URL=off` | Desactiva el keep-alive |
+  | `KEEP_ALIVE_INTERVAL_MINUTES` | Intervalo en minutos (por defecto `10`; debe ser menor que los ~15 min de inactividad) |
+
+- **Respaldo:** `.github/workflows/keep-alive.yml` hace `curl` a `/health` para despertar la app si algo la apagó. GitHub solo corre crons desde la rama por defecto, en la práctica cada pocas horas (no cada 10 min), y los desactiva tras 60 días sin commits. Tiene la URL del servicio escrita a mano: **hay que actualizarla si el servicio cambia de URL**.
+- **Si se pasa a un plan de pago**: poner `KEEP_ALIVE_URL=off` y desactivar el workflow.
+- No es una garantía oficial de Render; lo único garantizado es un plan pago. No requiere cambios en la app iOS.
+
+Para comprobar que funciona tras el deploy: dejar el servicio más de 15 min sin tráfico externo (idealmente varias horas) y medir `curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" https://<servicio>.onrender.com/health`. ~0,5 s = funcionó; ~60-90 s = se durmió, revisar los logs.
 
 ## Corriendo en desarrollo
 
