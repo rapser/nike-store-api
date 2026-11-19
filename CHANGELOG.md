@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased] — `fix/trust-proxy`
+
+### Fixed
+
+- **El rate limiter daba un único cupo compartido a todos los usuarios.** Render pone un proxy delante de la app y Express, sin `trust proxy`, ve la IP de ese proxy como IP de todos los clientes, así que los 100 req/min de `ThrottlerModule` se repartían entre todos en vez de ser por usuario. Se midió en producción: con el contador `x-ratelimit-remaining` a la vista desde una IP, las recargas hechas desde otro teléfono en datos móviles lo bajaban también. Con muchos usuarios a la vez habrían aparecido `429` ajenos, y un solo cliente abusivo podía bloquear a todos durante un minuto.
+- `configureTrustProxy` (`src/common/http/trust-proxy.ts`) fija `trust proxy = 1` en `main.ts`, de modo que Express toma la IP real de `X-Forwarded-For`. El `1` supone que Render es el único proxy; si se pone otro delante (Cloudflare, un balanceador), hay que subirlo.
+
+### Verified
+
+- 2 tests nuevos: con `trust proxy`, agotar el cupo de una IP no afecta a otra; sin él, ambas comparten cupo (reproduce el bug).
+- `tsc --noEmit`, `npm run build` y `eslint` sobre los archivos tocados pasan.
+
+### Pendiente
+
+- Tras el deploy, repetir la prueba del contador desde un teléfono en datos móviles: el contador visto desde otra IP ya no debe moverse con sus recargas.
+
 ## [Unreleased] — `feature/render-keep-alive`
 
 ### Added
