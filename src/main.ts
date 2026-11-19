@@ -1,13 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { configureTrustProxy } from './common/http/trust-proxy';
 import { validationExceptionFactory } from './common/pipes/validation-exception-factory';
 import { buildSwaggerDocument } from './swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  configureTrustProxy(app);
 
   app.use(helmet());
   app.enableCors();
