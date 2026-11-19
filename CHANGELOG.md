@@ -1,5 +1,33 @@
 # Changelog
 
+## [Unreleased] — `feature/render-keep-alive`
+
+### Added
+
+- **Keep-alive interno** (`src/health/keep-alive.service.ts`): cada 10 min la app hace `GET` a su propia URL pública (`RENDER_EXTERNAL_URL` + `/health`) para que Render Free no la duerma tras ~15 min sin tráfico. En local no hace nada, `KEEP_ALIVE_URL=off` lo desactiva, `KEEP_ALIVE_INTERVAL_MINUTES` cambia el intervalo, y un fallo de red o un `429` solo deja un `warn`. 9 tests con timers falsos.
+- **Workflow de respaldo** (`.github/workflows/keep-alive.yml`): `curl` a `/health` para despertar la app si algo la apagó.
+
+### Changed
+
+- `GET /health` queda fuera del rate limiter (`@SkipThrottle()`): lo consultan el health check de Render y el keep-alive, y un `429` propio parecería una caída.
+- **Migración a otra cuenta de Render**: el servicio `nike-store-api` se recreó en una cuenta nueva, con nueva URL pública `https://nike-store-api-q86v.onrender.com`. Neon no cambió, así que la base y los datos siguen siendo los mismos.
+
+### Fixed
+
+- README: el **Build Command** de Render era `npm install && npm run build`, pero el real es `npm install --include=dev && npm run build`. Con `NODE_ENV=production` el `npm install` normal se salta las `devDependencies`, y `nest build` y `prisma generate` (el `postinstall`) viven ahí.
+- README: `start:prod` corre `node dist/src/main`, no `node dist/main`.
+- README: el Health Check Path (`/health`) ahora se documenta como parte de la configuración; el servicio anterior lo tenía vacío.
+
+### Verified
+
+- `npx tsc --noEmit`, `npm run build` y `eslint src/health` pasan; los 9 tests nuevos pasan.
+- `/health` y `GET /products` responden `200` en el servicio nuevo.
+
+### Pendiente
+
+- El catálogo en vivo sigue teniendo **15 productos**: el `seed` de `feature/catalogo-30-productos` (30) no se ha corrido contra Neon.
+- Confirmar tras el deploy que los logs de Render muestran `Pinging … every 10 min`.
+
 ## [Unreleased] — `feature/catalogo-30-productos`
 
 ### Changed
