@@ -232,6 +232,38 @@ El diseño actual ya deja varios caminos abiertos sin necesitar una reescritura:
 - **Base de datos:** Neon ya soporta *read replicas* y *autoscaling* de cómputo en planes pagos — si las lecturas (catálogo, historial de pedidos) se vuelven el cuello de botella antes que las escrituras, se pueden apuntar esas queries a una réplica sin cambiar el esquema.
 - **Observabilidad:** el `requestId` por request y el `LoggingInterceptor` ya existen — el siguiente paso natural al escalar sería exportar esos logs a un servicio centralizado (ej. Datadog, Grafana Loki) en vez de solo stdout, para poder correlacionar errores entre múltiples instancias.
 
+## Deuda técnica conocida
+
+Cosas que se sabe que no están resueltas del todo, con su impacto y cómo cerrarlas. Ninguna afecta hoy (un solo usuario), pero conviene cerrarlas **antes de publicar la app o de tener usuarios reales**.
+
+### 1. El rate limiter no cuenta por la IP real del usuario
+
+El `ThrottlerModule` limita a 100 peticiones por minuto por cliente, pero detrás de Render el cliente que ve Express no es el usuario.
+
+- **Contexto:** la app está detrás de Cloudflare y del balanceador de Render (la respuesta trae `server: cloudflare`). Sin `trust proxy`, Express veía la IP del proxy como la de todos: un único cupo compartido por todos los usuarios (medido: las recargas desde un teléfono en datos móviles bajaban el contador `x-ratelimit-remaining` visto desde otra IP).
+- **Estado actual:** `src/common/http/trust-proxy.ts` fija `trust proxy = 1`. Eso cambió el comportamiento pero **no lo resolvió**: el contador de una misma IP ahora alterna entre dos series, es decir, la IP que ve Express parece ser una de **borde de Cloudflare** y no la del usuario. Es probable que usuarios de una misma zona sigan compartiendo cupo.
+- **Impacto:** nulo con un usuario. Con muchos a la vez, `429` ajenos, y un cliente abusivo puede bloquear a los que comparten su IP de borde. Una estimación sin prueba de carga: unas 50 personas simultáneas ya podrían notarlo.
+- **Valor correcto: desconocido.** Depende de cuántos saltos hay delante de la app. En otros despliegues en Render se reportan `2` y `3`; no se midió el de este servicio.
+- **Plan para cerrarla:**
+  1. Leer el número de saltos de una variable de entorno (`TRUST_PROXY_HOPS`, por defecto `1`) en `configureTrustProxy`, para poder probar valores en el panel de Render sin un PR por cada uno (cambiar una variable solo reinicia el servicio).
+  2. Probar `2` y luego `3`: con el sondeo de abajo, el valor correcto es aquel en que el contador baja **de 1 en 1** y las recargas desde otra red (teléfono en datos móviles) **no lo mueven**.
+  3. Dejar el valor encontrado fijo en el código y ajustar el test.
+- **Qué no hacer:** no usar `trust proxy = true`, ni un número mayor al real, ni leer `CF-Connecting-IP` / `X-Forwarded-For` a mano sin validar el origen. Un cliente puede falsificar esas cabeceras y obtener un cupo nuevo en cada petición, saltándose el límite.
+
+Sondeo para medir el contador (mirar `x-ratelimit-remaining` mientras otra red recarga la URL):
+
+```bash
+for i in $(seq 1 30); do
+  r=$(curl -s -D - -o /dev/null https://<servicio>.onrender.com/products | tr -d '\r' \
+      | grep -i '^x-ratelimit-remaining' | awk '{print $2}')
+  echo "$(date +%H:%M:%S) #$i remaining=$r"; sleep 3
+done
+```
+
+### 2. El catálogo en vivo tiene 15 productos, no 30
+
+El seed de 30 productos (`feature/catalogo-30-productos`) nunca se corrió contra Neon, por ser una base compartida entre local y producción. Para dejarlo vivo: `npx prisma db seed` con `DIRECT_URL` de producción. El README de la app iOS ya describe el catálogo de 30.
+
 ## Estado
 
 El backend (Fases 1-7 del plan del proyecto) está completo y verificado de punta a punta contra Neon, y desplegado en Render. La integración con iOS (Fases 8-13) fue un esfuerzo posterior, ya completado en el app.

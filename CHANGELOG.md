@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased] — `docs/deuda-tecnica-rate-limit`
+
+### Added
+
+- README: sección **«Deuda técnica conocida»** con el problema del rate limiter detrás de Cloudflare + Render (IP real del usuario), su impacto, el plan para cerrarlo (`TRUST_PROXY_HOPS` probado con el contador `x-ratelimit-remaining`), lo que no hay que hacer, y el seed de 30 productos pendiente en Neon.
+
+### Known issues
+
+- **El rate limiter sigue sin contar por la IP real.** `trust proxy = 1` (`fix/trust-proxy`) cambió el comportamiento pero no lo resolvió: se midió en producción y el contador alterna entre dos series, lo que apunta a que Express ve una IP de borde de Cloudflare. El número correcto de saltos no se conoce (otros despliegues en Render reportan 2 o 3). Se deja como deuda técnica; sin impacto con un solo usuario.
+
 ## [Unreleased] — `fix/trust-proxy`
 
 ### Fixed
@@ -14,7 +24,7 @@
 
 ### Pendiente
 
-- Tras el deploy, repetir la prueba del contador desde un teléfono en datos móviles: el contador visto desde otra IP ya no debe moverse con sus recargas.
+- ~~Tras el deploy, repetir la prueba del contador desde un teléfono en datos móviles: el contador visto desde otra IP ya no debe moverse con sus recargas.~~ **Hecho tras el deploy: el arreglo quedó incompleto.** Con `trust proxy = 1` el contador de una misma IP alterna entre dos series, así que Express ve una IP de borde de Cloudflare y no la del usuario. Ver «Deuda técnica conocida» en el README.
 
 ## [Unreleased] — `feature/render-keep-alive`
 
