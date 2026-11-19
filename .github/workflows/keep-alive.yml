@@ -1,0 +1,20 @@
+name: Keep Render awake
+
+# Respaldo del auto-ping interno (src/health/keep-alive.service.ts): solo sirve
+# para despertar la app si algo la apagó. GitHub corre los crons con retraso
+# (en la práctica cada pocas horas, no cada 10 min) y solo desde la rama por
+# defecto, y los desactiva tras 60 días sin commits.
+on:
+  schedule:
+    - cron: "3,13,23,33,43,53 * * * *" # fuera de los minutos redondos
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          curl --fail --silent --show-error --max-time 150 --retry 2 --retry-delay 10 \
+            --output /dev/null --write-out "HTTP %{http_code} en %{time_total}s\n" \
+            https://nike-store-api-q86v.onrender.com/health
